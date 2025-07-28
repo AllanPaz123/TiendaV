@@ -2,184 +2,229 @@
 
 namespace Controllers\Videojuegos;
 
-use Controllers\PublicController;
-use Dao\Videojuegos\Products as ProductsDAO;
+use Controllers\PrivateController;
+use Dao\Videojuegos\Products as ProductsDao;
 use Utilities\Site;
 use Utilities\Validators;
 use Views\Renderer;
 
-const LIST_URL = "index.php?page=Videojuegos-Products";
-const XSR_KEY = "xsrToken_products";
-
-class Product extends PublicController
+class Product extends PrivateController
 {
-    private array $viewData;
-    private array $modes;
-
-    public function __construct()
-    {
-        $this->modes = [
-            "INS" => 'Agregando un nuevo producto',
-            "UPD" => 'Editando producto %s (%s)',
-            "DEL" => 'Eliminando producto %s (%s)',
-            "DSP" => 'Detalle del producto %s (%s)'
-        ];
-
-        $this->viewData = [
-            "productId" => 0,
-            "productName" => "",
-            "productDescription" => "",
-            "productPrice" => "0.00",
-            "productImgUrl" => "",
-            "productStock" => 0,
-            "productStatus" => "ACT",
-            "mode" => "",
-            "modeDsc" => "",
-            "errores" => [],
-            "readonly" => "",
-            "showAction" => true,
-            "xsrToken" => ""
-        ];
-    }
+    private array $viewData = [];
+    private string $mode = "DSP";
+    private array $modeDescriptions = [
+        "DSP" => "Detalle de %s %s",
+        "INS" => "Nuevo Producto",
+        "UPD" => "Editar %s %s",
+        "DEL" => "Eliminar %s %s"
+    ];
+    private string $readonly = "";
+    private bool $showCommitBtn = true;
+    private array $product = [
+        "productId" => 0,
+        "productName" => "",
+        "productDescription" => "",
+        "productPrice" => 0,
+        "productImgUrl" => "",
+        "productStock" => 0,
+        "productStatus" => "ACT"
+    ];
+    private string $product_xss_token = "";
 
     public function run(): void
     {
-        $this->capturarModoPantalla();
-        $this->datosDeDao();
-        if ($this->isPostBack()) {
-            $this->datosFormulario();
-            $this->validarDatos();
-            if (count($this->viewData["errores"]) === 0) {
-                $this->procesarDatos();
-            }
-        }
-        $this->prepararVista();
-        Renderer::render("Videojuegos/Product", $this->viewData);
-    }
+        try {
+            $this->getData();
 
-    private function throwError(string $message)
-    {
-        Site::redirectToWithMsg(LIST_URL, $message);
-    }
-
-    private function capturarModoPantalla()
-    {
-        if (isset($_GET["mode"])) {
-            $this->viewData["mode"] = $_GET["mode"];
-            if (!isset($this->modes[$this->viewData["mode"]])) {
-                $this->throwError("BAD REQUEST: Modo no válido.");
-            }
-        }
-    }
-
-    private function datosDeDao()
-    {
-        if ($this->viewData["mode"] !== "INS") {
-            if (isset($_GET["productId"])) {
-                $this->viewData["productId"] = intval($_GET["productId"]);
-                $product = ProductsDAO::getProductById($this->viewData["productId"]);
-                if ($product) {
-                    $this->viewData = array_merge($this->viewData, $product);
-                } else {
-                    $this->throwError("No se encontró el producto solicitado.");
+            if ($this->isPostBack()) {
+                if ($this->validateData()) {
+                    $this->handlePostAction();
                 }
-            } else {
-                $this->throwError("No se proporcionó el ID del producto.");
+            }
+
+            $this->setViewData();
+            Renderer::render("Videojuegos/Product", $this->viewData);
+        } catch (\Exception $ex) {
+            Site::redirectToWithMsg(
+                "index.php?page=Videojuegos-Products",
+                $ex->getMessage()
+            );
+        }
+    }
+
+    private function getData()
+    {
+        $this->mode = $_GET["mode"] ?? "NOF";
+
+        if (isset($this->modeDescriptions[$this->mode])) {
+            if (!$this->isFeatureAutorized("product_" . $this->mode)) {
+                throw new \Exception("No tiene permisos para realizar esta acción.", 1);
+            }
+
+            $this->readonly = $this->mode === "DEL" ? "readonly" : "";
+            $this->showCommitBtn = $this->mode !== "DSP";
+
+            if ($this->mode !== "INS") {
+                $productId = intval($_GET["productId"] ?? 0);
+                if ($productId <= 0) {
+                    throw new \Exception("ID de producto inválido.", 1);
+                }
+
+                $this->product = ProductsDao::getProductById($productId);
+                if (!$this->product) {
+                    throw new \Exception("No se encontró el Producto", 1);
+                }
+            }
+        } else {
+            throw new \Exception("Formulario cargado en modalidad invalida", 1);
+        }
+    }
+
+    private function validateData(): bool
+    {
+        $errors = [];
+        $this->product_xss_token = $_POST["product_xss_token"] ?? "";
+        $this->product["productId"] = intval($_POST["productId"] ?? 0);
+
+        if (!in_array($this->mode, ["DEL"])) {
+            $this->product["productName"] = trim(strval($_POST["productName"] ?? ""));
+            $this->product["productDescription"] = trim(strval($_POST["productDescription"] ?? ""));
+            $this->product["productPrice"] = floatval($_POST["productPrice"] ?? 0);
+            $this->product["productImgUrl"] = trim(strval($_POST["productImgUrl"] ?? ""));
+            $this->product["productStock"] = intval($_POST["productStock"] ?? 0);
+            $this->product["productStatus"] = trim(strval($_POST["productStatus"] ?? ""));
+
+            if (Validators::IsEmpty($this->product["productName"])) {
+                $errors["productName_error"] = "El nombre del producto es requerido";
+            }
+
+            if (Validators::IsEmpty($this->product["productDescription"])) {
+                $errors["productDescription_error"] = "La descripción del producto es requerida";
+            }
+
+            if ($this->product["productPrice"] <= 0) {
+                $errors["productPrice_error"] = "El precio debe ser mayor a cero";
+            }
+
+            if (Validators::IsEmpty($this->product["productImgUrl"])) {
+                $errors["productImgUrl_error"] = "La imagen del producto es requerida";
+            }
+
+            if (!in_array($this->product["productStatus"], ["ACT", "INA", "DSC"])) {
+                $errors["productStatus_error"] = "El estado del producto es inválido";
             }
         }
-    }
 
-    private function datosFormulario()
-    {
-        foreach (["productName", "productDescription", "productPrice", "productImgUrl", "productStock", "productStatus", "xsrToken"] as $campo) {
-            if (isset($_POST[$campo])) {
-                $this->viewData[$campo] = $_POST[$campo];
+
+        $tmpXsrToken = $_SESSION["product_xss_token"] ?? '';
+        if ($this->product_xss_token !== $tmpXsrToken) {
+            throw new \Exception("Solicitud inválida. Intente de nuevo.");
+        }
+
+        if (count($errors) > 0) {
+            foreach ($errors as $key => $val) {
+                $this->product[$key] = $val;
             }
+            return false;
         }
+
+        return true;
     }
 
-    private function validarDatos()
+    private function handlePostAction(): void
     {
-        if (Validators::IsEmpty($this->viewData["productName"])) {
-            $this->viewData["errores"]["productName"] = "El nombre del producto es obligatorio.";
-        }
-        if (!is_numeric($this->viewData["productPrice"]) || floatval($this->viewData["productPrice"]) < 0) {
-            $this->viewData["errores"]["productPrice"] = "El precio debe ser un número positivo.";
-        }
-        if (!in_array($this->viewData["productStatus"], ["ACT", "INA", "DSC"])) {
-            $this->viewData["errores"]["productStatus"] = "Estado inválido.";
-        }
-        $tmpXsrToken = $_SESSION[XSR_KEY];
-        if ($this->viewData["xsrToken"] !== $tmpXsrToken) {
-            error_log("Token inválido en producto.");
-            $this->throwError("Solicitud inválida. Intente de nuevo.");
-        }
-    }
-
-    private function procesarDatos()
-    {
-        switch ($this->viewData["mode"]) {
+        switch ($this->mode) {
             case "INS":
-                if (ProductsDAO::nuevoProducto(
-                    $this->viewData["productName"],
-                    $this->viewData["productDescription"],
-                    floatval($this->viewData["productPrice"]),
-                    $this->viewData["productImgUrl"],
-                    intval($this->viewData["productStock"]),
-                    $this->viewData["productStatus"]
-                ) > 0) {
-                    Site::redirectToWithMsg(LIST_URL, "Producto agregado exitosamente.");
-                } else {
-                    $this->viewData["errores"]["global"] = ["Error al agregar el producto."];
-                }
+                $this->handleInsert();
                 break;
             case "UPD":
-                if (ProductsDAO::actualizarProducto(
-                    $this->viewData["productId"],
-                    $this->viewData["productName"],
-                    $this->viewData["productDescription"],
-                    floatval($this->viewData["productPrice"]),
-                    $this->viewData["productImgUrl"],
-                    intval($this->viewData["productStock"]),
-                    $this->viewData["productStatus"]
-                )) {
-                    Site::redirectToWithMsg(LIST_URL, "Producto actualizado exitosamente.");
-                } else {
-                    $this->viewData["errores"]["global"] = ["Error al actualizar el producto."];
-                }
+                $this->handleUpdate();
                 break;
             case "DEL":
-                if (ProductsDAO::eliminarProducto($this->viewData["productId"])) {
-                    Site::redirectToWithMsg(LIST_URL, "Producto eliminado exitosamente.");
-                } else {
-                    $this->viewData["errores"]["global"] = ["Error al eliminar el producto."];
-                }
+                $this->handleDelete();
                 break;
+            default:
+                throw new \Exception("Modo inválido", 1);
         }
     }
 
-    private function prepararVista()
+    private function handleInsert(): void
     {
-        $this->viewData["modeDsc"] = sprintf(
-            $this->modes[$this->viewData["mode"]],
-            $this->viewData["productName"],
-            $this->viewData["productId"]
+        $result = ProductsDao::nuevoProducto(
+            $this->product["productName"],
+            $this->product["productDescription"],
+            $this->product["productPrice"],
+            $this->product["productImgUrl"],
+            $this->product["productStock"],
+            $this->product["productStatus"]
         );
 
-        if (count($this->viewData["errores"]) > 0) {
-            foreach ($this->viewData["errores"] as $campo => $error) {
-                $this->viewData["error_" . $campo] = $error;
-            }
+        if ($result > 0) {
+            Site::redirectToWithMsg(
+                "index.php?page=Videojuegos-Products",
+                "Producto creado exitosamente"
+            );
+        } else {
+            throw new \Exception("No se pudo insertar el producto");
         }
+    }
 
-        if (in_array($this->viewData["mode"], ["DEL", "DSP"])) {
-            $this->viewData["readonly"] = "readonly";
-        }
-        if ($this->viewData["mode"] === "DSP") {
-            $this->viewData["showAction"] = false;
-        }
+    private function handleUpdate(): void
+    {
+        $result = ProductsDao::actualizarProducto(
+            $this->product["productId"],
+            $this->product["productName"],
+            $this->product["productDescription"],
+            $this->product["productPrice"],
+            $this->product["productImgUrl"],
+            $this->product["productStock"],
+            $this->product["productStatus"]
+        );
 
-        $this->viewData["xsrToken"] = hash("sha256", random_int(0, 1000000) . time() . 'product' . $this->viewData["mode"]);
-        $_SESSION[XSR_KEY] = $this->viewData["xsrToken"];
+        if ($result > 0) {
+            Site::redirectToWithMsg(
+                "index.php?page=Videojuegos-Products",
+                "Producto actualizado exitosamente"
+            );
+        } else {
+            throw new \Exception("No se pudo actualizar el producto");
+        }
+    }
+
+    private function handleDelete(): void
+    {
+        $result = ProductsDao::eliminarProducto($this->product["productId"]);
+
+        if ($result > 0) {
+            Site::redirectToWithMsg(
+                "index.php?page=Videojuegos-Products",
+                "Producto eliminado exitosamente"
+            );
+        } else {
+            throw new \Exception("No se pudo eliminar el producto");
+        }
+    }
+
+    private function setViewData(): void
+    {
+        $this->viewData["mode"] = $this->mode;
+        $this->viewData["product_xss_token"] = hash("sha256", random_int(0, 1000000) . time() . 'product' . $this->mode);
+        $_SESSION["product_xss_token"] = $this->viewData["product_xss_token"];
+
+        $this->viewData["FormTitle"] = sprintf(
+            $this->modeDescriptions[$this->mode],
+            $this->product["productId"],
+            $this->product["productName"]
+        );
+
+        $this->viewData["showCommitBtn"] = $this->showCommitBtn;
+        $this->viewData["readonly"] = $this->readonly;
+
+
+        $productStatusKey = "productStatus_" . strtolower($this->product["productStatus"]);
+        $this->product[$productStatusKey] = "selected";
+
+
+        $this->viewData["product"] = $this->product;
     }
 }

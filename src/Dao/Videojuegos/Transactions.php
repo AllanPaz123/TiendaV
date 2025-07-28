@@ -1,65 +1,31 @@
 <?php
 
-namespace Dao\Videojuegos;
+namespace Dao\VideoJuegos;
 
 use Dao\Table;
 
-class Transactions extends Table
+class transactions extends Table
 {
-    public static function addTransaction($usercod, $total, $currency, $status)
+    public static function insertTransaction($data)
     {
-        $fecha = date("Y-m-d H:i:s");
-        $sqlstr = "INSERT INTO transacciones (usercod, fecha, total) VALUES (:usercod, :fecha, :total)";
-        $params = [
-            "usercod" => $usercod,
-            "fecha" => $fecha,
-            "total" => $total
-        ];
-        self::executeNonQuery($sqlstr, $params);
+        $sql = "INSERT INTO transactions (usercod, paypal_order_id, txnAmount, txnStatus, txnDate, txnCurrency, txnPayerEmail)
+            VALUES (:usercod, :paypal_order_id, :txnAmount, :txnStatus, :txnDate, :txnCurrency, :txnPayerEmail)";
+        return self::executeNonQuery($sql, $data);
     }
 
-    public static function getAllTransactions()
+    public static function getTransactionByPaypalId($paypal_order_id)
     {
-        $sql = "SELECT transaccionid, usercod, fecha, total FROM transacciones ORDER BY fecha DESC;";
-        $transacciones = self::obtenerRegistros($sql, []);
-
-        foreach ($transacciones as &$trx) {
-            $trx["detalles"] = self::getTransactionDetails($trx["transaccionid"]);
-        }
-
-        return $transacciones;
-    }
-    public static function addTransactionDetail($transid, $productId, $cantidad, $precio)
-    {
-        $sql = "INSERT INTO transacciones_detalles (transaccionid, productId, cantidad, precio)
-                VALUES (:transid, :productId, :cantidad, :precio)";
-        return self::executeNonQuery($sql, compact("transid", "productId", "cantidad", "precio"));
+        $sql = "SELECT * FROM transactions WHERE paypal_order_id = :paypal_order_id";
+        $params = ["paypal_order_id" => $paypal_order_id];
+        return self::obtenerUnRegistro($sql, $params);
     }
 
-    public static function updateProductStock($productId, $cantidadComprada)
+    public static function getUserTransactionHistory($usercod)
     {
-        $sql = "UPDATE products SET productStock = productStock - :cantidad WHERE productId = :productId";
-        return self::executeNonQuery($sql, ["cantidad" => $cantidadComprada, "productId" => $productId]);
-    }
-
-    public static function getTransactionsByUser($usercod)
-    {
-        $sql = "SELECT transaccionid, trxfecha, trxmonto, trxstatus FROM transacciones WHERE usercod = :usercod ORDER BY trxfecha DESC;";
-        $transacciones = self::obtenerRegistros($sql, ["usercod" => $usercod]);
-
-        foreach ($transacciones as &$trx) {
-            $trx["detalles"] = self::getTransactionDetails($trx["transaccionid"]);
-        }
-
-        return $transacciones;
-    }
-
-    public static function getTransactionDetails($transaccionid)
-    {
-        $sql = "SELECT d.*, p.productName
-                FROM transacciones_detalles d
-                JOIN products p ON d.productId = p.productId
-                WHERE d.transaccionid = :transaccionid";
-        return self::obtenerRegistros($sql, ["transaccionid" => $transaccionid]);
+        $sql = "SELECT t.txnId, t.paypal_order_id, t.txnDate, t.txnAmount, t.txnStatus, t.txnCurrency
+            FROM transactions t
+            WHERE t.usercod = :usercod
+            ORDER BY t.txnDate DESC";
+        return self::obtenerRegistros($sql, ["usercod" => $usercod]);
     }
 }

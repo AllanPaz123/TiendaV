@@ -14,9 +14,8 @@
          
           <li><a href="index.php?page=Checkout-Checkout">Carrito</a></li>
          
-          <li><a href="index.php?page=Checkout-Historial">Detalle de Compras</a></li> <!--<historial global>-->
+          <li><a href="index.php?page=Checkout_Historial">Detalle de Compras</a></li>
           
-           <li><a href="index.php?page=Historial-Historial">Historial de compras</a></li><!--<historial de todas las compras>--> 
         </ul>
       </nav>
     </div>

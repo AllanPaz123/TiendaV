@@ -3,17 +3,29 @@
 namespace Controllers\Checkout;
 
 use Controllers\PublicController;
-use Dao\Videojuegos\Transactions;
+use Dao\VideoJuegos\Transactions;
+use Dao\VideoJuegos\TransactionDetails;
+use Views\Renderer;
 
 class Historial extends PublicController
 {
     public function run(): void
     {
-        $usercod = $_SESSION["login"]["userId"];
-        $transacciones = Transactions::getTransactionsByUser($usercod);
+        $dataview = [];
+        $usercod = \Utilities\Security::getUserId();
+        //$usercod = $_SESSION["usercod"] ?? null;
 
-        \Views\Renderer::render("paypal/historial", [
-            "transacciones" => $transacciones
-        ]);
+        if (!$usercod) {
+            \Utilities\Site::redirectToWithMsg("index.php", "Debes iniciar sesión para ver tu historial.");
+        }
+
+        $historial = Transactions::getUserTransactionHistory($usercod);
+
+        foreach ($historial as &$transaccion) {
+            $transaccion["productos"] = TransactionDetails::getDetailsByTxnId($transaccion["txnId"]);
+        }
+
+        $dataview["historial"] = $historial;
+        Renderer::render("paypal/historial", $dataview);
     }
 }

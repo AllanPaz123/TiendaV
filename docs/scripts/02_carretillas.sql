@@ -37,6 +37,32 @@ CREATE TABLE
 
     
 
+    CREATE TABLE `transactions` (
+    `txnId` INT NOT NULL AUTO_INCREMENT,
+    `usercod` BIGINT(10) DEFAULT NULL,
+    `paypal_order_id` VARCHAR(128) NOT NULL,
+    `txnAmount` DECIMAL(12,2) NOT NULL,
+    `txnStatus` VARCHAR(64) NOT NULL,
+    `txnDate` DATETIME NOT NULL,
+    `txnCurrency` VARCHAR(10) DEFAULT 'USD',
+    `txnPayerEmail` VARCHAR(128),
+    PRIMARY KEY (`txnId`),
+    UNIQUE (`paypal_order_id`),
+    FOREIGN KEY (`usercod`) REFERENCES `usuario`(`usercod`) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE `transaction_details` (
+    `txnDetailId` INT AUTO_INCREMENT PRIMARY KEY,
+    `txnId` INT NOT NULL,
+    `productId` INT NOT NULL,
+    `quantity` INT NOT NULL,
+    `unitPrice` DECIMAL(12,2) NOT NULL,
+    FOREIGN KEY (`txnId`) REFERENCES `transactions`(`txnId`) ON DELETE CASCADE,
+    FOREIGN KEY (`productId`) REFERENCES `products`(`productId`) ON DELETE CASCADE
+   );
+
+
 
 INSERT INTO products (productName, productDescription, productPrice, productImgUrl, productStock, productStatus)
 VALUES (
@@ -129,26 +155,3 @@ VALUES (
  'ACT');
 
 
-CREATE TABLE transacciones (
-    transaccionid INT NOT NULL AUTO_INCREMENT,
-    usercod VARCHAR(128) NOT NULL,
-    total DECIMAL(10, 2) NOT NULL,
-    currency VARCHAR(5) NOT NULL,
-    status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (transaccionid)
-);
-
-CREATE TABLE transacciones_detalles (
-    detalleid INT NOT NULL AUTO_INCREMENT,
-    transaccionid INT NOT NULL,
-    productId INT NOT NULL,
-    cantidad INT NOT NULL,
-    precio DECIMAL(10, 2) NOT NULL,
-    PRIMARY KEY (detalleid),
-    FOREIGN KEY (transaccionid) REFERENCES transacciones(transaccionid),
-    FOREIGN KEY (productId) REFERENCES products(productId)
-);
-
-INSERT INTO funciones_roles (rolcod, fncod)
-VALUES ('cliente', 'HistorialUsuario_DSP');

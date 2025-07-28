@@ -49,6 +49,21 @@ class Cart extends \Dao\Table
         return $productosCurados;
     }
 
+    //lo del carrito para actualizar el stock
+    public static function getCartByUser($usercod)
+    {
+        $sql = "SELECT * FROM carretilla WHERE usercod = :usercod";
+        $params = ["usercod" => $usercod];
+        return self::obtenerRegistros($sql, $params);
+    }
+
+    public static function clearCart($usercod)
+    {
+        $sql = "DELETE FROM carretilla WHERE usercod = :usercod";
+        $params = ["usercod" => $usercod];
+        return self::executeNonQuery($sql, $params);
+    }
+
     public static function removeCart($userId)
     {
         $sql = "DELETE FROM carretilla WHERE usercod = :usercod;";
@@ -177,19 +192,5 @@ class Cart extends \Dao\Table
         $sqlAllProductosActivos = "SELECT * from products where productId=:productId;";
         $productosDisponibles = self::obtenerRegistros($sqlAllProductosActivos, array("productId" => $productId));
         return $productosDisponibles;
-    }
-
-    //funciones para: Capturar pago de PayPal, Registrar la transacción, Registrar detalles, Limpiar carrito y  Actualizar stock. 
-
-    public static function clearCartByUser(int $usercod)
-    {
-        $sql = "DELETE FROM carretilla WHERE usercod = :usercod;";
-        return self::executeNonQuery($sql, ["usercod" => $usercod]);
-    }
-
-    public static function getCartItemsByUser(int $usercod)
-    {
-        $sql = "SELECT productId, crrctd AS cantidad, crrprc AS precio FROM carretilla WHERE usercod = :usercod;";
-        return self::obtenerRegistros($sql, ["usercod" => $usercod]);
     }
 }

@@ -1,5 +1,7 @@
 parameters.env
 .devcontainer/
+/workspaces/TiendaV/src/Views/templates/layout.view.tpl
+/workspaces/TiendaV/src/Views/templates/privatelayout.view.tpl
 .DS_Store
 vendor
 .phpdoc

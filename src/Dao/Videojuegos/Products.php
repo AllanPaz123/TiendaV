@@ -1,15 +1,49 @@
 <?php
 
-namespace Dao\VideoJuegos;
+namespace Dao\Videojuegos;
 
 use Dao\Table;
 
 class products extends Table
 {
-    public static function getProducts()
-    {
-        $sqlstr = "SELECT * FROM products;";
-        return self::obtenerRegistros($sqlstr, []);
+    public static function getProducts(
+        string $partialName = "",
+        string $productStatus = "",
+        string $orderBy = "",
+        bool $orderDescending = false,
+        int $pageNumber = 0,
+        int $itemsPerPage = 10
+    ) {
+        $sql = "SELECT SQL_CALC_FOUND_ROWS * FROM products WHERE 1=1 ";
+        $params = [];
+
+        if ($partialName !== "") {
+            $sql .= " AND productName LIKE :partialName ";
+            $params["partialName"] = "%$partialName%";
+        }
+
+        if ($productStatus !== "") {
+            $sql .= " AND productStatus = :productStatus ";
+            $params["productStatus"] = $productStatus;
+        }
+
+        $allowedOrderFields = ["productId", "productName", "productPrice"];
+        if ($orderBy !== "" && in_array($orderBy, $allowedOrderFields)) {
+            $orderDir = $orderDescending ? "DESC" : "ASC";
+            $sql .= " ORDER BY $orderBy $orderDir ";
+        }
+
+        $sql .= " LIMIT :offset, :limit ";
+        $params["offset"] = $pageNumber * $itemsPerPage;
+        $params["limit"] = $itemsPerPage;
+
+
+        $products = self::obtenerRegistros($sql, $params);
+
+        $totalRes = self::obtenerUnRegistro("SELECT FOUND_ROWS() AS total;", []);
+        $total = $totalRes ? intval($totalRes["total"]) : 0;
+
+        return ["products" => $products, "total" => $total];
     }
 
     public static function getProductById(int $productId)
@@ -85,12 +119,15 @@ class products extends Table
         );
     }
 
-    //actualizar stock
-    public static function updateStock($productId, $quantity)
+    // Actualizar stock (por ejemplo para restar stock al hacer una venta)
+    public static function updateStock(int $productId, int $quantity): int
     {
         $sql = "UPDATE products SET productStock = productStock - :quantity
             WHERE productId = :productId AND productStock >= :quantity";
-        $params = compact("quantity", "productId");
+        $params = [
+            "quantity" => $quantity,
+            "productId" => $productId
+        ];
         return self::executeNonQuery($sql, $params);
     }
 }

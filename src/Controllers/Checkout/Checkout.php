@@ -5,73 +5,93 @@ namespace Controllers\Checkout;
 use Controllers\PublicController;
 use Dao\Cart\Cart;
 use Utilities\Security;
+use Utilities\Cart\CartFns;
 
 class Checkout extends PublicController
 {
     public function run(): void
     {
-        /*
-        1) Mostrar el listado de productos a facturar y los detalles y totales de la proforma.
-        2) Al dar click en Pagar
-            2.1) Crear una orden de Paypal con los productos de la proforma.
-            2.2) Redirigir al usuario a la página de Paypal para que complete el pago.
-        
-        */
-        $viewData = array();
+        $viewData = [];
+        $isLogged = Security::isLogged();
+        $userId = $isLogged ? Security::getUserId() : null;
+        $anonCod = !$isLogged ? CartFns::getAnnonCartCode() : null;
 
-        $carretilla = Cart::getAuthCart(Security::getUserId());
+        // Obtener carrito
+        $carretilla = $isLogged
+            ? Cart::getAuthCart($userId)
+            : Cart::getAnonCart($anonCod);
+
         if ($this->isPostBack()) {
             $processPayment = true;
+
+            // Cambiar cantidades
             if (isset($_POST["removeOne"]) || isset($_POST["addOne"])) {
                 $productId = intval($_POST["productId"]);
                 $productoDisp = Cart::getProductoDisponible($productId);
                 $amount = isset($_POST["removeOne"]) ? -1 : 1;
-                if ($amount == 1) {
-                    if ($productoDisp["productStock"] - $amount >= 0) {
-                        Cart::addToAuthCart(
-                            $productId,
-                            Security::getUserId(),
-                            $amount,
-                            $productoDisp["productPrice"]
-                        );
+
+                // Obtener la cantidad actual del producto en el carrito
+                $currentQty = 0;
+                foreach ($carretilla as $item) {
+                    if ($item['productId'] == $productId) {
+                        $currentQty = $item['crrctd'];
+                        break;
                     }
-                } else {
-                    Cart::addToAuthCart(
-                        $productId,
-                        Security::getUserId(),
-                        $amount,
-                        $productoDisp["productPrice"]
-                    );
                 }
-                $carretilla = Cart::getAuthCart(Security::getUserId());
+
+                // Validar que no se pueda reducir a menos de 0
+                if ($amount == -1 && $currentQty <= 0) {
+                    // No hacer nada si ya es 0 y se intenta reducir
+                    $processPayment = false;
+                } else {
+                    if ($amount == 1) {
+                        if ($productoDisp["productStock"] - $amount >= 0) {
+                            $isLogged
+                                ? Cart::addToAuthCart($productId, $userId, $amount, $productoDisp["productPrice"])
+                                : Cart::addToAnonCart($productId, $anonCod, $amount, $productoDisp["productPrice"]);
+                        }
+                    } else {
+                        // Solo permitir reducir si la cantidad actual es mayor a 0
+                        if ($currentQty > 0) {
+                            $isLogged
+                                ? Cart::addToAuthCart($productId, $userId, $amount, $productoDisp["productPrice"])
+                                : Cart::addToAnonCart($productId, $anonCod, $amount, $productoDisp["productPrice"]);
+                        }
+                    }
+
+                    $carretilla = $isLogged
+                        ? Cart::getAuthCart($userId)
+                        : Cart::getAnonCart($anonCod);
+                }
+
                 $processPayment = false;
             }
 
-            //aqui modificacion para cancelar la carretilla
+            // Cancelar carretilla
             if (isset($_POST["cancelCart"])) {
                 foreach ($carretilla as $producto) {
-                    // Devolver productos al stock
-                    \Dao\Cart\Cart::addToAuthCart(
-                        $producto["productId"],
-                        Security::getUserId(),
-                        -$producto["crrctd"],
-                        $producto["crrprc"]
-                    );
+                    $cantidad = -$producto["crrctd"];
+                    $isLogged
+                        ? Cart::addToAuthCart($producto["productId"], $userId, $cantidad, $producto["crrprc"])
+                        : Cart::addToAnonCart($producto["productId"], $anonCod,  $cantidad, $producto["crrprc"]);
                 }
-                // Vaciar carretilla
-                \Dao\Cart\Cart::removeCart(Security::getUserId());
-                \Utilities\Site::redirectTo("index.php?page=index"); // o cualquier página que desees
+
+                $isLogged
+                    ? Cart::removeCart($userId)
+                    : Cart::removeAnonCart($anonCod);
+
+                \Utilities\Site::redirectTo("index.php?page=index");
                 return;
             }
 
+            // Pago con PayPal
             if ($processPayment) {
                 $PayPalOrder = new \Utilities\Paypal\PayPalOrder(
                     "test" . (time() - 10000000),
-                    "http://localhost:8080/negociosweb/index.php?page=Checkout_Error",
-                    "http://localhost:8080/negociosweb/index.php?page=Checkout_Accept"
+                    "http://localhost:80/index.php?page=Checkout_Error",
+                    "http://localhost:80/index.php?page=Checkout_Accept"
                 );
 
-                //foreach ($viewData["carretilla"] as $producto) {
                 foreach ($carretilla as $producto) {
                     $PayPalOrder->addItem(
                         $producto["productName"],
@@ -100,20 +120,12 @@ class Checkout extends PublicController
                     }
                     die();
                 } else {
-                    // Manejo de error: podrías redirigir a Checkout_Error o mostrar un mensaje
                     \Utilities\Site::redirectTo("index.php?page=Checkout_Error");
                 }
-
-                /*
-                $_SESSION["orderid"] = $response->id;
-                foreach ($response->links as $link) {
-                    if ($link->rel == "approve") {
-                        \Utilities\Site::redirectTo($link->href);
-                    }
-                }
-                die();*/
             }
         }
+
+        // Renderizar vista
         $finalCarretilla = [];
         $counter = 1;
         $total = 0;
@@ -125,6 +137,7 @@ class Checkout extends PublicController
             $finalCarretilla[] = $prod;
             $counter++;
         }
+
         $viewData["carretilla"] = $finalCarretilla;
         $viewData["total"] = number_format($total, 2);
         \Views\Renderer::render("paypal/checkout", $viewData);

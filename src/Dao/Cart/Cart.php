@@ -70,6 +70,12 @@ class Cart extends \Dao\Table
         return \Dao\Table::executeNonQuery($sql, ["usercod" => $userId]);
     }
 
+    public static function removeAnonCart($anonCod)
+    {
+        $sql = "DELETE FROM carretillaanon WHERE anoncod = :anoncod;";
+        return \Dao\Table::executeNonQuery($sql, ["anoncod" => $anonCod]);
+    }
+
     public static function getProductoDisponible($productId)
     {
         $sqlAllProductosActivos = "SELECT * from products where productStatus in ('ACT') and productId=:productId;";
@@ -126,7 +132,7 @@ class Cart extends \Dao\Table
         $producto = self::obtenerUnRegistro($validateSql, ["anoncod" => $anonCod, "productId" => $productId]);
         if ($producto) {
             if ($producto["crrctd"] + $amount <= 0) {
-                $deleteSql = "DELETE from carretillaanon where usercod = :usercod and productId = :productId;";
+                $deleteSql = "DELETE from carretillaanon where anoncod = :anoncod and productId = :productId;";
                 return self::executeNonQuery($deleteSql, ["anoncod" => $anonCod, "productId" => $productId]);
             } else {
                 $updateSql = "UPDATE carretillaanon set crrctd = crrctd + :amount where anoncod = :anoncod and productId = :productId";

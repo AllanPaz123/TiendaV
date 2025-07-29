@@ -1,4 +1,5 @@
 parameters.env
+.devcontainer/
 .DS_Store
 vendor
 .phpdoc

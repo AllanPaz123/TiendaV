@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="public/css/historial.css" />
+
 <section class="container-l">
   <section class="depth-4">
     <h1>Historial de Compras</h1>
@@ -28,4 +30,7 @@
     </div>
   </div>
   {{endfor historial}}
+  <div class="gracias-compra center">
+  <img src="public/imagenes/gracias-compra.png" alt="Gracias por su compra">
+  </div>
 </section>

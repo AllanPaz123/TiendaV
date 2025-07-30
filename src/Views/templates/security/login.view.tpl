@@ -27,8 +27,11 @@
         {{generalError}}
       </div>
     {{endif generalError}}
-    <div class="row right flex-end px-4">
-      <button class="primary" id="btnLogin" type="submit">Iniciar Sesión</button>
+    <div>
+    <p>
+      ¿No tiene cuenta? <a href="index.php?page=sec_register">Crear una</a>
+    </p>
+    <button class="primary" id="btnLogin" type="submit">Iniciar Sesión</button>
     </div>
     </section>
   </form>

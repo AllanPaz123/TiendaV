@@ -41,7 +41,6 @@ class Checkout extends PublicController
 
                 // Validar que no se pueda reducir a menos de 0
                 if ($amount == -1 && $currentQty <= 0) {
-                    // No hacer nada si ya es 0 y se intenta reducir
                     $processPayment = false;
                 } else {
                     if ($amount == 1) {
@@ -86,6 +85,13 @@ class Checkout extends PublicController
 
             // Pago con PayPal
             if ($processPayment) {
+                if (!$isLogged) {
+                    \Utilities\Site::redirectToWithMsg(
+                        "index.php?page=sec_login",
+                        "Necesitas registrarte para continuar con la compra."
+                    );
+                    return;
+                }
                 $PayPalOrder = new \Utilities\Paypal\PayPalOrder(
                     "test" . (time() - 10000000),
                     "http://localhost:80/index.php?page=Checkout_Error",

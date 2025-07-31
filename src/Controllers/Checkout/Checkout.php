@@ -94,8 +94,8 @@ class Checkout extends PublicController
                 }
                 $PayPalOrder = new \Utilities\Paypal\PayPalOrder(
                     "test" . (time() - 10000000),
-                    "http://localhost:80/index.php?page=Checkout_Error",
-                    "http://localhost:80/index.php?page=Checkout_Accept"
+                    "http://localhost:8080/negociosweb/index.php?page=Checkout_Error",
+                    "http://localhost:8080/negociosweb/index.php?page=Checkout_Accept"
                 );
 
                 foreach ($carretilla as $producto) {

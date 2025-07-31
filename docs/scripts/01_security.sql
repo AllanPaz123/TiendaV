@@ -89,3 +89,66 @@ INSERT INTO funciones (fncod, fndsc, fnest, fntyp) VALUES ('product_INS', 'Agreg
 INSERT INTO roles_usuarios (usercod, rolescod, roleuserest, roleuserfch, roleuserexp) VALUES (1, 'ADMIN', 'ACT', NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR));
 INSERT INTO roles_usuarios (usercod, rolescod, roleuserest, roleuserfch, roleuserexp) VALUES (2, 'AUDIT', 'ACT', NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR));
 INSERT INTO roles_usuarios (usercod, rolescod, roleuserest, roleuserfch, roleuserexp) VALUES (3, 'OPADQ', 'ACT', NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR));
+
+
+INSERT INTO funciones (fncod, fndsc, fnest, fntyp) 
+VALUES ('Controllers\\Videojuegos\\Product', 'Controllers\\Videojuegos\\Product', 'ACT', 'CTR');
+
+INSERT INTO funciones (fncod, fndsc, fnest, fntyp) 
+VALUES ('Controllers\\Videojuegos\\Products', 'Controllers\\Videojuegos\\Products', 'ACT', 'CTR');
+
+INSERT INTO funciones (fncod, fndsc, fnest, fntyp) 
+VALUES ('Menu_PaymentCheckout', 'Menu_PaymentCheckout', 'ACT', 'MNU');
+
+INSERT INTO funciones (fncod, fndsc, fnest, fntyp) 
+VALUES ('product_DEL', 'Eliminar Productos', 'ACT', 'FNC');
+
+INSERT INTO funciones (fncod, fndsc, fnest, fntyp) 
+VALUES ('product_DSP', 'Detalle de Productos', 'ACT', 'FNC');
+
+INSERT INTO funciones (fncod, fndsc, fnest, fntyp) 
+VALUES ('product_INS', 'Agregar Productos', 'ACT', 'FNC');
+
+INSERT INTO funciones (fncod, fndsc, fnest, fntyp) 
+VALUES ('product_UPD', 'Editar Productos', 'ACT', 'FNC');
+
+
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('ADMIN', 'Controllers\\Videojuegos\\Product', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('ADMIN', 'Controllers\\Videojuegos\\Products', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('ADMIN', 'product_DEL', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('ADMIN', 'product_DSP', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('ADMIN', 'product_INS', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('ADMIN', 'product_UPD', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('AUDIT', 'Controllers\\Videojuegos\\Product', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('AUDIT', 'Controllers\\Videojuegos\\Products', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('AUDIT', 'product_DSP', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('OPADQ', 'Controllers\\Videojuegos\\Product', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('OPADQ', 'Controllers\\Videojuegos\\Products', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('OPADQ', 'product_DSP', 'ACT', '2026-07-27 00:00:00');
+
+INSERT INTO funciones_roles (rolescod, fncod, fnrolest, fnexp)
+VALUES ('OPADQ', 'product_UPD', 'ACT', '2026-07-27 00:00:00');

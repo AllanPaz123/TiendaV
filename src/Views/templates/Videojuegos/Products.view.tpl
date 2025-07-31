@@ -56,7 +56,7 @@
         <td>{{productId}}</td>
         <td>{{productName}}</td>
         <td>{{productDescription}}</td>
-        <td>L {{productPrice}}</td>
+        <td>$.{{productPrice}}</td>
         <td>{{productStock}}</td>
         <td>{{productStatus}}</td>
         <td>
